@@ -1,6 +1,6 @@
 // ============================================================
-// TERRAIN ANALYSIS FOR LEREI-X (region of interest roi)
-// Sections: 2.3.1 (Resistance: Slope), 2.3.1 (Adaptability: TRI)
+// TERRAIN ANALYSIS FOR LEREI-X (clipped to region of interest roi)
+// Sections: 2.3.1 
 // ============================================================
 
 // 1. AREA OF INTEREST
@@ -28,7 +28,7 @@ var neighborMean = srtm.reduceNeighborhood({
 var tri = srtm.subtract(neighborMean).abs()
   .rename('TRI');
 
-// 5. OPTIONAL: Apply land mask (exclude permanent water bodies)
+// 5. OPTIONAL: Apply land mask (exclude permanent water bodies, if needed)
 var waterMask = ee.ImageCollection('ESA/WorldCover/v100')
   .filterDate('2020')
   .first()
@@ -56,7 +56,7 @@ var stats = terrain.select(['slope_deg', 'TRI']).reduceRegion({
 });
 print('Terrain statistics (mean ± stdDev):', stats);
 
-// 9. EXPORT (for downstream Python causal analysis)
+// 9. EXPORT 
 Export.image.toDrive({
   image: slope,
   description: 'YRB_Slope_Degrees_30m',
