@@ -42,6 +42,7 @@ cd python_scripts
 - python part1_lerei_construction/01_normalize_indicators.py
 - python part1_lerei_construction/02_aggregate_components.py
 - python part1_lerei_construction/03_bayesian_sem_lerei_x.py
+- python part2_data_preparation/00_covariates_collinearity&JointMatrix.py
 - python part2_causal_inference/01_dml_ate.py
 - python part2_causal_inference/02_causal_forest_cate.py
 - python part2_causal_inference/03_counterfactual_map.py
