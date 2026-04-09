@@ -186,7 +186,7 @@ def align_to_reference(src_path, ref_meta, band=1, resampling=Resampling.bilinea
     return dst
 
 def align_multiband_to_reference(src_path, ref_meta, bands=(1, 2), resampling=Resampling.bilinear):
-    """Align multiple bands of a raster to reference grid."""
+    """ Align multiple bands of a raster to a reference grid."""
     out = []
     for b in bands:
         out.append(align_to_reference(src_path, ref_meta, band=b, resampling=resampling))
@@ -360,6 +360,11 @@ def main():
 
     print("\n✅ SHAP analysis complete. Outputs saved to:", OUTPUT_DIR)
 
-if __name__ == "__main__":
+
+    if __name__ == "__main__":
+    main()
+
+
+    
   
     main()
