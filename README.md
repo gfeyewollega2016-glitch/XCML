@@ -1,5 +1,5 @@
 #  Causal GeoXAI: Terracing and Landscape Resilience
-Code and Colab notebooks: Causal GeoXAI framework to assess terracing impacts on landscape resilience
+Code and Colab notebooks: Causal GeoXAI framework to assess terracing impacts on landscape resilience.
 This repository contains the main executable code (Google Earth Engine JavaScript + Python) to reproduce the analysis and outputs presented in:
 **Does terracing build landscape resilience? A causal GeoXAI assessment using Earth observations in China’s Yellow River Basin**  
 *Submitted to Remote Sensing of Environment*.
