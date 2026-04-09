@@ -30,7 +30,7 @@ This repository contains the main executable code (Google Earth Engine JavaScrip
 
 ### Step 2: Python – LEREI‑X Construction and Causal Analysis
 
-1. **Set up the Python environment** (local or Colab):
+1. **Set up the Python environment** (local or Colab https://colab.research.google.com/):
    pip install -r requirements.txt
 
 or using conda:
