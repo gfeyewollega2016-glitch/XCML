@@ -314,19 +314,3 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-    model = LEREIXBayesianSEM("LEREI_Output")
-    metrics = model.run_multi_year(file_list, years, n_samples=3000, draws=1000, tune=1000)#n_samples >400
