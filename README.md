@@ -37,20 +37,7 @@ or using conda:
 conda env create -f environment.yml
 conda activate causal-geoxai
 
-2. Run Python scripts **in order** (all scripts expect the GEE‑exported rasters in data/):
-
-- python part1_lerei_construction/01_normalize_indicators.py
-- python part1_lerei_construction/02_aggregate_components.py
-- python part1_lerei_construction/03_bayesian_sem_lerei_x.py
-- python part2_data_preparation/00_covariates_collinearity&JointMatrix.py
-- python part2_causal_inference/01_dml_ate.py
-- python part2_causal_inference/02_causal_forest_cate.py
-- python part2_causal_inference/03_counterfactual_map.py
-- python part3_geoxai_shap/01_train_lightgbm.py
-- python part3_geoxai_shap/02_conditioned_shap.py
-- python part3_geoxai_shap/03_shap_cate_integration.py
-- python part4_spatial_analysis/morans_i_clustering.py
-- python part4_spatial_analysis/spatial_block_bootstrap.py
+2. Run Python scripts **in order** (all scripts expect the GEE‑exported rasters in data/)
 
 
 
