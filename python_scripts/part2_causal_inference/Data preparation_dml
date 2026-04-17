@@ -1,0 +1,310 @@
+# =====================================================
+# TIME-VARYING DATA PREPARATION (per-year pre-treatment)
+# For DML causal analysis – consistent with LEREI-X lagged usage
+# =====================================================
+# Data-path neutral: set DATA_DIR below to your working directory.
+# Expected input: LEREI-X rasters, climate, terrain, land cover, treatment
+# Output: dml_data_{year}.npz bundles for causal inference
+# =====================================================
+
+import numpy as np
+import pandas as pd
+import rasterio
+from rasterio.warp import reproject, Resampling
+from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+import joblib
+import os
+
+# =====================================================
+# USER CONFIGURATION – EDIT THIS SECTION
+# =====================================================
+DATA_DIR = "./data"                     # Directory containing input rasters
+OUTPUT_DIR = "./results/causal_data"    # Where DML bundles will be saved
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# =====================================================
+# REFERENCE GRID (use LEREI_X_1990 as template)
+# =====================================================
+ref_path = os.path.join(DATA_DIR, "LEREI_Results", "LEREI_X_1990.tif")
+with rasterio.open(ref_path) as src:
+    ref_shape = src.shape
+    ref_transform = src.transform
+    ref_crs = src.crs
+
+# Save reference metadata
+ref_meta = {
+    'shape': ref_shape,
+    'crs': ref_crs,
+    'transform': ref_transform,
+    'bounds': src.bounds,
+    'nodata': src.nodata
+}
+joblib.dump(ref_meta, os.path.join(OUTPUT_DIR, "reference_metadata.pkl"))
+print("Reference metadata saved.")
+
+# =====================================================
+# HELPER: load and align any raster to reference grid
+# =====================================================
+def load_and_align(path, band=1, required=True, resample=Resampling.bilinear):
+    if not os.path.exists(path):
+        if required:
+            raise FileNotFoundError(f"Missing file: {path}")
+        return None
+    with rasterio.open(path) as src:
+        if src.shape == ref_shape and src.crs == ref_crs:
+            data = src.read(band)
+        else:
+            data = np.zeros(ref_shape, dtype=np.float32)
+            reproject(
+                source=rasterio.band(src, band),
+                destination=data,
+                src_transform=src.transform,
+                src_crs=src.crs,
+                dst_transform=ref_transform,
+                dst_crs=ref_crs,
+                resampling=resample
+            )
+        return data
+
+# =====================================================
+# STATIC RASTERS (loaded once)
+# =====================================================
+print("Loading static rasters...")
+STATIC = {
+    "DEM": os.path.join(DATA_DIR, "DEM.tif"),
+    "SOC": os.path.join(DATA_DIR, "GEE_Exports", "SOC_original.tif"),
+    "SoilType": os.path.join(DATA_DIR, "YRB_Soil_Data", "Soil_Type_Enhanced.tif")
+}
+static_data = {}
+for name, path in STATIC.items():
+    if os.path.exists(path):
+        static_data[name] = load_and_align(path, required=True)
+    else:
+        raise FileNotFoundError(f"Static raster not found: {path}")
+
+dem = static_data["DEM"]
+soc = static_data["SOC"]
+soil_type = static_data["SoilType"]
+
+# =====================================================
+# YEAR‑SPECIFIC CONFIGURATION
+# Lag logic: 2000 uses 1990 lag, 2010 uses 2000 lag, 2020 uses 2010 lag
+# =====================================================
+YEARS = {
+    2000: {
+        "LEREI_outcome": os.path.join(DATA_DIR, "LEREI_Results", "LEREI_X_2000.tif"),
+        "LEREI_lag":     os.path.join(DATA_DIR, "LEREI_Results", "LEREI_X_1990.tif"),
+        "AI":            os.path.join(DATA_DIR, "GEE_ClimateExports", "mean_ai_1985_2000.tif"),
+        "LUC_baseline":  os.path.join(DATA_DIR, "Imported", "lulc_1985.tif"),
+        "LUC_start":     os.path.join(DATA_DIR, "Imported", "lulc_1985.tif"),
+        "LUC_end":       os.path.join(DATA_DIR, "Imported", "lulc_1995.tif"),
+        "NDVI":          os.path.join(DATA_DIR, "GEE_Exports", "ndvi_pre2000.tif"),
+        "PopDens":       os.path.join(DATA_DIR, "GEE_Exports", "WorldPop_1990_1km.tif"),
+        "EP":            os.path.join(DATA_DIR, "GEE_Exports", "EP_pretreated_z_1990.tif"),
+        "treatment_raw": os.path.join(DATA_DIR, "GEE_Exports", "T_2000.tif")
+    },
+    2010: {
+        "LEREI_outcome": os.path.join(DATA_DIR, "LEREI_Results", "LEREI_X_2010.tif"),
+        "LEREI_lag":     os.path.join(DATA_DIR, "LEREI_Results", "LEREI_X_2000.tif"),
+        "AI":            os.path.join(DATA_DIR, "GEE_ClimateExports", "mean_ai_2000_2010.tif"),
+        "LUC_baseline":  os.path.join(DATA_DIR, "Imported", "lulc_2000.tif"),
+        "LUC_start":     os.path.join(DATA_DIR, "Imported", "lulc_1995.tif"),
+        "LUC_end":       os.path.join(DATA_DIR, "Imported", "lulc_2005.tif"),
+        "NDVI":          os.path.join(DATA_DIR, "GEE_Exports", "ndvi_pre2010.tif"),
+        "PopDens":       os.path.join(DATA_DIR, "GEE_Exports", "WorldPop_2000_1km.tif"),  # Fixed
+        "EP":            os.path.join(DATA_DIR, "GEE_Exports", "EP_pretreated_z_2000.tif"),
+        "treatment_raw": os.path.join(DATA_DIR, "GEE_Exports", "T_2010.tif")
+    },
+    2020: {
+        "LEREI_outcome": os.path.join(DATA_DIR, "LEREI_Results", "LEREI_X_2020.tif"),
+        "LEREI_lag":     os.path.join(DATA_DIR, "LEREI_Results", "LEREI_X_2010.tif"),
+        "AI":            os.path.join(DATA_DIR, "GEE_ClimateExports", "mean_ai_2010_2020.tif"),
+        "LUC_baseline":  os.path.join(DATA_DIR, "Imported", "lulc_2010.tif"),
+        "LUC_start":     os.path.join(DATA_DIR, "Imported", "lulc_2005.tif"),
+        "LUC_end":       os.path.join(DATA_DIR, "Imported", "lulc_2015.tif"),
+        "NDVI":          os.path.join(DATA_DIR, "GEE_Exports", "ndvi_pre2020.tif"),
+        "PopDens":       os.path.join(DATA_DIR, "GEE_Exports", "WorldPop_2010_1km.tif"),
+        "EP":            os.path.join(DATA_DIR, "GEE_Exports", "EP_pretreated_z_2010.tif"),
+        "treatment_raw": os.path.join(DATA_DIR, "GEE_Exports", "T_2020.tif")
+    }
+}
+
+# =====================================================
+# HELPER: compute land cover fractional changes
+# =====================================================
+def compute_lulc_trends(luc_start, luc_end, mask, suffix=""):
+    """Return dict of fractional changes for Grass, Farm, Forest, Urban"""
+    class_names = {1: 'Grass', 2: 'Farm', 3: 'Forest', 7: 'Urban'}
+    trends = {}
+    for val, name in class_names.items():
+        start_frac = (luc_start == val).astype(float)
+        end_frac = (luc_end == val).astype(float)
+        change = (end_frac - start_frac) * mask.astype(float)
+        trends[f'Δ{name}{suffix}'] = change
+    return trends
+
+# =====================================================
+# PROCESS EACH YEAR
+# =====================================================
+all_dfs = []
+treat_vals_all = []
+per_year_masks = {}
+
+for year, paths in YEARS.items():
+    print(f"\n{'='*50}\nProcessing year {year}\n{'='*50}")
+
+    # Load outcome and lag
+    y = load_and_align(paths["LEREI_outcome"], required=True)
+    y_lag = load_and_align(paths["LEREI_lag"], required=True)
+    
+    # Validate lag year
+    expected_lag_year = {2000: 1990, 2010: 2000, 2020: 2010}[year]
+    print(f"  Outcome: {year}, Lag: {expected_lag_year} (pre-treatment)")
+
+    # Climate
+    ai = load_and_align(paths["AI"], required=True)
+
+    # Land cover
+    luc_baseline = load_and_align(paths["LUC_baseline"], required=True, resample=Resampling.nearest)
+    luc_start = load_and_align(paths["LUC_start"], required=True, resample=Resampling.nearest)
+    luc_end = load_and_align(paths["LUC_end"], required=True, resample=Resampling.nearest)
+
+    # NDVI
+    with rasterio.open(paths["NDVI"]) as src:
+        ndvi_mean = src.read(1)
+        ndvi_trend = src.read(2)
+
+    pop = load_and_align(paths["PopDens"], required=True)
+    ep = load_and_align(paths["EP"], required=True)
+    treat_raw = load_and_align(paths["treatment_raw"], required=True)
+
+    # Build valid mask
+    mask = (~np.isnan(y) & ~np.isnan(y_lag) & ~np.isnan(ai) &
+            ~np.isnan(luc_baseline) & ~np.isnan(luc_start) & ~np.isnan(luc_end) &
+            ~np.isnan(ndvi_mean) & ~np.isnan(ndvi_trend) &
+            ~np.isnan(pop) & ~np.isnan(ep) & ~np.isnan(treat_raw) &
+            ~np.isnan(dem) & ~np.isnan(soc) & ~np.isnan(soil_type))
+    
+    if mask.sum() == 0:
+        print(f"  No valid pixels for {year}, skipping")
+        continue
+
+    print(f"  Valid pixels: {mask.sum():,}")
+
+    # Save mask
+    per_year_masks[year] = mask
+    np.save(os.path.join(OUTPUT_DIR, f"valid_mask_{year}.npy"), mask)
+
+    # Get coordinates
+    rows, cols = np.where(mask)
+    xs, ys = rasterio.transform.xy(ref_transform, rows, cols)
+    xs = np.array(xs)
+    ys = np.array(ys)
+
+    # Compute LULC trends
+    lulc_trends = compute_lulc_trends(luc_start, luc_end, mask, suffix=f"_{year}")
+
+    # Build dataframe
+    df = pd.DataFrame({
+        'x': xs, 'y': ys, 'year': year,
+        'LEREI': y[mask],
+        'LEREI_lag': y_lag[mask],
+        'AI': ai[mask],
+        'LUC_baseline': luc_baseline[mask].astype(int),
+        'NDVI': ndvi_mean[mask],
+        'NDVI_trend': ndvi_trend[mask],
+        'PopDens': pop[mask],
+        'EP': ep[mask],
+        'treatment_raw': treat_raw[mask],
+        'DEM': dem[mask],
+        'SOC': soc[mask],
+        'SoilType': soil_type[mask]
+    })
+    
+    # Add trend columns
+    for col, arr in lulc_trends.items():
+        df[col] = arr[mask]
+
+    # Add dummy variables for baseline LUC
+    for val, name in {1:'Grassland', 2:'Farmland', 3:'Forests', 7:'Urban'}.items():
+        df[f'LUC_{name}'] = (luc_baseline[mask] == val).astype(int)
+
+    all_dfs.append(df)
+    treat_vals_all.extend(df['treatment_raw'].values)
+
+# =====================================================
+# NORMALIZE TREATMENT (pooled across years) to [0,100]
+# =====================================================
+t_min, t_max = np.nanmin(treat_vals_all), np.nanmax(treat_vals_all)
+for df in all_dfs:
+    df['treatment'] = (df['treatment_raw'] - t_min) / (t_max - t_min) * 100
+    df['treatment'] = df['treatment'].clip(0, 100)
+
+# =====================================================
+# COMBINE AND SAVE FULL PANEL
+# =====================================================
+combined = pd.concat(all_dfs, ignore_index=True)
+combined.to_csv(os.path.join(OUTPUT_DIR, "causal_data_timevarying_panel.csv"), index=False)
+
+# =====================================================
+# DML‑READY OUTPUT: per‑year datasets
+# =====================================================
+print("\n" + "="*60)
+print("Generating DML‑ready data per year...")
+print("="*60)
+
+for year in YEARS:
+    df_year = combined[combined['year'] == year].copy()
+    if df_year.empty:
+        continue
+
+    Y = df_year['LEREI'].values.astype(float)
+    T = df_year['treatment'].values.astype(float)
+    x_coords = df_year['x'].values.astype(float)
+    y_coords = df_year['y'].values.astype(float)
+
+    # Columns NOT used as covariates
+    drop_cols = ['x', 'y', 'year', 'LEREI', 'treatment_raw', 'treatment']
+
+    # Select covariate columns
+    candidate_X_cols = [c for c in df_year.columns if c not in drop_cols]
+    X_cols = []
+    for c in candidate_X_cols:
+        if df_year[c].isnull().all():
+            continue
+        if df_year[c].nunique(dropna=False) <= 1:
+            continue
+        X_cols.append(c)
+
+    X = df_year[X_cols].values.astype(float)
+
+    # Impute NaNs
+    imputer = SimpleImputer(strategy='median')
+    X_imputed = imputer.fit_transform(X)
+
+    # Standardize covariates
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_imputed)
+
+    # Save DML bundle
+    np.savez(
+        os.path.join(OUTPUT_DIR, f"dml_data_{year}.npz"),
+        Y=Y, T=T, X=X_scaled,
+        x=x_coords, y=y_coords,
+        feature_names=np.array(X_cols, dtype=object)
+    )
+
+    # Save imputer and scaler
+    joblib.dump(imputer, os.path.join(OUTPUT_DIR, f"imputer_{year}.pkl"))
+    joblib.dump(scaler, os.path.join(OUTPUT_DIR, f"scaler_{year}.pkl"))
+    
+    # Save feature list
+    with open(os.path.join(OUTPUT_DIR, f"features_{year}.txt"), 'w') as f:
+        f.write('\n'.join(X_cols))
+
+    print(f"Year {year}: {len(Y):,} observations, {X_scaled.shape[1]} covariates")
+    print(f"  Features: {X_cols[:5]}{' ...' if len(X_cols) > 5 else ''}")
+
+print(f"\n✅ DML‑ready data saved to {OUTPUT_DIR}")
+print("Each year's data is stored as 'dml_data_<year>.npz' containing arrays: Y, T, X, x, y, feature_names")
