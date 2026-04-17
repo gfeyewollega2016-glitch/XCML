@@ -277,18 +277,56 @@ class LEREIXBayesianSEM:
         return df
 
 
+
 # =============================================================================
 # Example usage
 # =============================================================================
 if __name__ == "__main__":
+    # Update these paths to your actual component rasters
     file_list = [
-        "LEREI_path/components_1990.tif",
-        "LEREI_path/components_2000.tif",
-        "LEREI_path/components_2010.tif",
-        "LEREI_path/components_2020.tif",
-        "LEREI_path/components_2025.tif",
+        "/path/to/components_1990.tif",
+        "/path/to/components_2000.tif",
+        "/path/to/components_2010.tif",
+        "/path/to/components_2020.tif",
+        "/path/to/components_2025.tif",
     ]
     years = [1990, 2000, 2010, 2020, 2025]
+
+    # Validate all rasters exist and have same shape
+    for p in file_list:
+        if not os.path.exists(p):
+            raise FileNotFoundError(f"Missing raster: {p}")
+
+    model = LEREIXBayesianSEM(output_dir="LEREI_Output", random_state=42)
+    
+    # n_samples=3000 is sufficient for basin‑scale heterogeneity
+    metrics = model.run_multi_year(
+        file_list=file_list,
+        years=years,
+        n_samples=3000,   # >400, sufficient for stable posteriors
+        draws=1000,
+        tune=1000
+    )
+    
+    print("\n📊 Final metrics saved to LEREI_Output/summary/metrics.csv")
+    print("📁 LEREI‑X rasters saved to LEREI_Output/rasters/")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
 
     model = LEREIXBayesianSEM("LEREI_Output")
     metrics = model.run_multi_year(file_list, years, n_samples=3000, draws=1000, tune=1000)#n_samples >400
