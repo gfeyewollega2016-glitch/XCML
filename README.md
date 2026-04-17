@@ -13,7 +13,7 @@ This repository contains the main executable code (Google Earth Engine JavaScrip
 | 'python_scripts/part1_lerei_construction/' | Python | 2.3.1–2.3.2 | Bayesian SEM for LEREI‑X |
 | 'python_scripts/part2_causal_inference/' | Python | 2.5–2.6 | DML (ATE), Causal Forest DML (CATE), counterfactual mapping |
 | 'python_scripts/part3_geoxai_shap/' | Python | 2.7 | LightGBM, conditioned SHAP, SHAP‑CATE integration |
-| 'python_scripts/part4_spatial_analysis/' | Python | 2.3.3, 2.6 | Local Moran’s I, spatial block bootstrap |
+
 
 ## How to Reproduce the Entire Workflow
 
