@@ -2,15 +2,15 @@
 Code and Colab notebooks: Causal GeoXAI framework to assess terracing impacts on landscape resilience.
 This repository contains the main executable code (Google Earth Engine JavaScript + Python) to reproduce the analysis and outputs presented in:
 **Causal GeoXAI: Does terracing build landscape resilience? Earth observation evidence from China's Yellow River Basin**  
-*Submitted to Remote Sensing of Environment*.
+*Submitted to ====*.
 
 
 ## Repository Structure and Corresponding Methods Sections
 
 | Folder     | Language | Methods Section | Description |
 |--------|----------|----------------|-------------|
-| 'gee_scripts/' | JavaScript (GEE) | 2.2, 2.4 | Data retrieval, preprocessing, LEREI indicator calculation, terrace‑aware RUSLE, export to PyAPI (Colab-Drive/Asset) |
-| 'python_scripts/part1_lerei_construction/' | Python | 2.3.1–2.3.2 | Bayesian SEM for LEREI‑X |
+| 'gee_scripts/' | JavaScript (GEE) | 2.2, 2.4 | Data retrieval, preprocessing, LEREI-X, terrace‑aware RUSLE, export to PyAPI (Colab-Drive/Asset) |
+| 'python_scripts/part1_lerei_construction/' | Python | 2.3.1–2.3.2 |SEM-backed resilience metric |
 | 'python_scripts/part2_causal_inference/' | Python | 2.5–2.6 | DML (ATE), Causal Forest DML (CATE), counterfactual mapping |
 | 'python_scripts/part3_geoxai_shap/' | Python | 2.7 | LightGBM, conditioned SHAP, SHAP‑CATE integration |
 
